@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 function App() {
   const [item, setItem] = useState("");
@@ -29,7 +38,7 @@ function App() {
     setRecommendation(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/inventory", {
+      const res = await fetch(`${API_URL}/inventory`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +70,7 @@ function App() {
     setError(null);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/shelf_life?item=${encodeURIComponent(shelfItem)}`
+        `${API_URL}/shelf_life?item=${encodeURIComponent(shelfItem)}`
       );
       if (!res.ok) {
         throw new Error("Failed to fetch shelf life");
@@ -76,7 +85,7 @@ function App() {
 
   const fetchTopSpoiled = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/top_spoiled");
+      const res = await fetch(`${API_URL}/top_spoiled`);
       const data = await res.json();
       setTopSpoiled(data);
     } catch (err) {

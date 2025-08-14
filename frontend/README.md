@@ -2,6 +2,18 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Environment Variables
+
+Create a `.env` file in this directory and set the backend API endpoint:
+
+```
+REACT_APP_API_URL=http://localhost:8000
+```
+
+The above default targets a locally running backend. In production, override
+`REACT_APP_API_URL` with the URL of your deployed API before running `npm run build`
+or by configuring the environment variable in your hosting provider.
+
 ## Available Scripts
 
 In the project directory, you can run:
