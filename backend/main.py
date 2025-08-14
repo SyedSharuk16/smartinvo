@@ -30,6 +30,10 @@ SPOILAGE_HISTORY = []
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "spoilage_model.pkl")
 model = joblib.load(MODEL_PATH)
 
+# Load global wastage data once
+WASTAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "Wastage.csv")
+WASTAGE_DF = pd.read_csv(WASTAGE_PATH)
+
 # Load shelf life data from CSV and prepare fuzzy matching
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "shelf_life.csv")
 SHELF_LIFE_DF = pd.read_csv(DATA_PATH)
@@ -111,7 +115,8 @@ def recommend_inventory(item: InventoryItem):
     # Track spoilage stats
     SPOILAGE_HISTORY.append({
         "item": item.item.lower(),
-        "loss_percentage": float(loss_percentage * 100)
+        "city": item.city.lower(),
+        "loss_percentage": float(loss_percentage * 100),
     })
 
     # Generating recommendation
@@ -149,20 +154,70 @@ def shelf_life_lookup(item: str):
     return {"item": name, "avg_shelf_life": avg}
 
 
-@app.get("/top_spoiled")
-def top_spoiled(limit: int = 5):
-    """Return top items with highest predicted spoilage."""
-    if not SPOILAGE_HISTORY:
-        return []
-    df = pd.DataFrame(SPOILAGE_HISTORY)
+@app.get("/global_waste")
+def global_waste(limit: int = 5):
+    """Return top wasted items from the global dataset."""
+    df = WASTAGE_DF.copy()
+    df["loss_percentage"] = pd.to_numeric(df["loss_percentage"], errors="coerce")
     top = (
-        df.groupby("item")["loss_percentage"]
+        df.dropna(subset=["loss_percentage", "commodity", "country"])
+        .groupby(["commodity", "country"])["loss_percentage"]
         .mean()
         .sort_values(ascending=False)
         .head(limit)
         .reset_index()
     )
     return top.to_dict(orient="records")
+
+
+@app.get("/store_spoiled")
+def store_spoiled(city: str):
+    """Return spoilage stats for a specific city/store."""
+    if not SPOILAGE_HISTORY:
+        return []
+    df = pd.DataFrame(SPOILAGE_HISTORY)
+    city_df = df[df["city"] == city.lower()]
+    if city_df.empty:
+        return []
+    items = (
+        city_df.groupby("item")["loss_percentage"]
+        .mean()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
+    return items.to_dict(orient="records")
+
+
+class DeleteItem(BaseModel):
+    city: str
+    item: str
+
+
+@app.delete("/store_spoiled")
+def delete_store_item(data: DeleteItem):
+    """Remove all history entries for a given item in a city."""
+    global SPOILAGE_HISTORY
+    before = len(SPOILAGE_HISTORY)
+    SPOILAGE_HISTORY = [
+        record
+        for record in SPOILAGE_HISTORY
+        if not (record["city"] == data.city.lower() and record["item"] == data.item.lower())
+    ]
+    deleted = before - len(SPOILAGE_HISTORY)
+    return {"deleted": deleted}
+
+
+@app.get("/model_info")
+def model_info():
+    """Explain the ML model and temperature correlation."""
+    return {
+        "model": "RandomForestRegressor",
+        "details": (
+            "Predictions leverage a RandomForestRegressor trained on historic spoilage data. "
+            "Higher temperatures accelerate microbial growth and correlate with increased food waste, "
+            "so the app factors local weather into its recommendations."
+        ),
+    }
 
 def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category):
     risk = 0

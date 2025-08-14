@@ -1,4 +1,4 @@
-from main import calculate_spoilage_risk
+from main import calculate_spoilage_risk, global_waste, model_info
 
 def test_low_risk():
     risk = calculate_spoilage_risk(avg_temp=22, humidity=50, chance_of_rain=10, month=5, category='frozen')
@@ -11,3 +11,14 @@ def test_moderate_risk():
 def test_high_risk():
     risk = calculate_spoilage_risk(avg_temp=32, humidity=80, chance_of_rain=80, month=8, category='vegetable')
     assert risk >= 6
+
+
+def test_global_waste():
+    data = global_waste()
+    assert isinstance(data, list) and len(data) > 0
+    assert 'commodity' in data[0]
+
+
+def test_model_info():
+    info = model_info()
+    assert info.get('model') == 'RandomForestRegressor'
