@@ -7,6 +7,7 @@ from weather import get_weather
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from rapidfuzz import process, fuzz
 
 load_dotenv()
 
@@ -23,27 +24,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SPOILAGE_HISTORY = []
+
 # Loading the ML model from ML folder
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "spoilage_model.pkl")
 model = joblib.load(MODEL_PATH)
 
-# Average shelf life in days for common items (merged from original and CSV commodities)
-AVG_SHELF_LIFE = {
-    ('spinach', 'vegetable'): 5,
-    ('apple', 'fruit'): 30,
-    ('milk', 'dairy'): 7,
-    ('frozen peas', 'frozen'): 180,
-    ('wheat', 'grains'): 180,
-    ('maize (corn)', 'grains'): 180,
-    ('rice', 'grains'): 365,
-    ('rice, milled', 'grains'): 365,
-    ('sorghum', 'grains'): 180,
-    ('barley', 'grains'): 180,
-    ('oats', 'grains'): 180,
-    ('millet', 'grains'): 180,
-    ('buckwheat', 'grains'): 180,
-    ('groundnuts, excluding shelled', 'nuts'): 180
+# Load shelf life data from CSV and prepare fuzzy matching
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "shelf_life.csv")
+SHELF_LIFE_DF = pd.read_csv(DATA_PATH)
+SHELF_LIFE_LOOKUP = {
+    row["item"].lower(): row["shelf_life_days"] for _, row in SHELF_LIFE_DF.iterrows()
 }
+
+def get_avg_shelf_life(name: str) -> int:
+    """Return average shelf life for a given item using fuzzy matching."""
+    if not SHELF_LIFE_LOOKUP:
+        return 7
+    match = process.extractOne(name.lower(), list(SHELF_LIFE_LOOKUP.keys()), scorer=fuzz.WRatio)
+    if match and match[1] >= 60:
+        return int(SHELF_LIFE_LOOKUP[match[0]])
+    return 7
 
 class InventoryItem(BaseModel):
     item: str
@@ -77,7 +78,7 @@ def recommend_inventory(item: InventoryItem):
     days_in_stock = (datetime.now() - arrival).days
 
     # Lookup avg shelf life (default to 7 days if unknown)
-    avg_life = AVG_SHELF_LIFE.get((item.item.lower(), item.category.lower()), 7)
+    avg_life = get_avg_shelf_life(item.item)
 
     # Check if item is in CSV commodities for ML prediction
     csv_commodities = [
@@ -107,6 +108,12 @@ def recommend_inventory(item: InventoryItem):
     adjusted_shelf_life = max(round(avg_life * (1 - 0.5 * risk_factor)), 1)
     remaining_days = adjusted_shelf_life - days_in_stock
 
+    # Track spoilage stats
+    SPOILAGE_HISTORY.append({
+        "item": item.item.lower(),
+        "loss_percentage": float(loss_percentage * 100)
+    })
+
     # Generating recommendation
     if remaining_days <= 0:
         advice = f"❌ Your {item.item} has likely spoiled due to weather risks and time in storage. Please remove immediately."
@@ -131,6 +138,31 @@ def recommend_inventory(item: InventoryItem):
         "adjusted_shelf_life": adjusted_shelf_life,
         "weather_explanation": explanation
     }
+
+
+@app.get("/shelf_life")
+def shelf_life_lookup(item: str):
+    """Return average shelf life for a user-provided item."""
+    avg = get_avg_shelf_life(item)
+    match = process.extractOne(item.lower(), list(SHELF_LIFE_LOOKUP.keys()), scorer=fuzz.WRatio)
+    name = match[0] if match else item
+    return {"item": name, "avg_shelf_life": avg}
+
+
+@app.get("/top_spoiled")
+def top_spoiled(limit: int = 5):
+    """Return top items with highest predicted spoilage."""
+    if not SPOILAGE_HISTORY:
+        return []
+    df = pd.DataFrame(SPOILAGE_HISTORY)
+    top = (
+        df.groupby("item")["loss_percentage"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(limit)
+        .reset_index()
+    )
+    return top.to_dict(orient="records")
 
 def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category):
     risk = 0
@@ -165,3 +197,4 @@ def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category)
         risk += 2
 
     return risk
+
