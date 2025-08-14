@@ -1,0 +1,16 @@
+item,category,shelf_life_days
+apple,fruit,30
+banana,fruit,7
+spinach,vegetable,5
+milk,dairy,7
+rice,grains,365
+chicken,meat,2
+beef,meat,3
+lettuce,vegetable,7
+bread,grains,5
+tomato,fruit,10
+potato,vegetable,90
+cheese,dairy,21
+yogurt,dairy,14
+cabbage,vegetable,14
+orange,fruit,30
