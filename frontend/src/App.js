@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Bar } from "react-chartjs-2";
+import "./App.css";
+import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  ArcElement,
   Tooltip,
   Legend,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend
+);
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -24,6 +33,7 @@ function App() {
   const [shelfItem, setShelfItem] = useState("");
   const [shelfResult, setShelfResult] = useState(null);
   const [topSpoiled, setTopSpoiled] = useState([]);
+  const [storeStats, setStoreStats] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,21 +103,53 @@ function App() {
     }
   };
 
+  const fetchStoreStats = async (cityName) => {
+    try {
+      const res = await fetch(
+        `${API_URL}/store_spoiled?city=${encodeURIComponent(cityName)}`
+      );
+      const data = await res.json();
+      setStoreStats(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (itemName) => {
+    try {
+      await fetch(`${API_URL}/store_spoiled`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city, item: itemName }),
+      });
+      fetchTopSpoiled();
+      fetchStoreStats(city);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchTopSpoiled();
+    fetchStoreStats(city);
   }, []);
 
   useEffect(() => {
     if (recommendation) {
       fetchTopSpoiled();
+      fetchStoreStats(city);
     }
-  }, [recommendation]);
+  }, [recommendation, city]);
+
+  useEffect(() => {
+    fetchStoreStats(city);
+  }, [city]);
 
   return (
-    <div style={{ maxWidth: 600, margin: "auto", fontFamily: "Arial, sans-serif", padding: 20 }}>
-      <h1>Smart Inventory Spoilage Predictor</h1>
+    <div className="container">
+      <h1 className="fade-in">Smart Inventory Spoilage Predictor</h1>
 
-      <div style={{ marginBottom: 20 }}>
+      <div className="card">
         <h2>Lookup Shelf Life</h2>
         <input
           type="text"
@@ -116,11 +158,7 @@ function App() {
           placeholder="e.g. Milk"
           style={{ width: "70%", padding: 8 }}
         />
-        <button
-          type="button"
-          onClick={handleShelfSearch}
-          style={{ padding: "8px 12px", marginLeft: 10 }}
-        >
+        <button type="button" onClick={handleShelfSearch}>
           Search
         </button>
         {shelfResult && (
@@ -135,26 +173,21 @@ function App() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
-        <div style={{ marginBottom: 10 }}>
-          <label>Item Name:</label><br />
+      <form onSubmit={handleSubmit} className="card">
+        <div className="field">
+          <label>Item Name:</label>
           <input
             type="text"
             value={item}
             onChange={(e) => setItem(e.target.value)}
             placeholder="e.g. Rice, milled"
-            style={{ width: "100%", padding: 8 }}
             required
           />
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label>Category:</label><br />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          >
+        <div className="field">
+          <label>Category:</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="vegetable">Vegetable</option>
             <option value="fruit">Fruit</option>
             <option value="dairy">Dairy</option>
@@ -166,60 +199,40 @@ function App() {
           </select>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label>City:</label><br />
+        <div className="field">
+          <label>City:</label>
           <input
             type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="e.g. Singapore"
-            style={{ width: "100%", padding: 8 }}
             required
           />
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label>Arrival Date:</label><br />
+        <div className="field">
+          <label>Arrival Date:</label>
           <input
             type="date"
             value={arrivalDate}
             onChange={(e) => setArrivalDate(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#007bff",
-            color: "white",
-            border: "none",
-            cursor: loading ? "not-allowed" : "pointer",
-            width: "100%",
-          }}
-        >
+        <button type="submit" disabled={loading}>
           {loading ? "Calculating..." : "Get Recommendation"}
         </button>
       </form>
 
       {error && (
-        <div style={{ color: "red", marginBottom: 10 }}>
+        <div className="card" style={{ color: "red" }}>
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {recommendation && (
-        <div
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: 4,
-            padding: 15,
-            backgroundColor: "#f9f9f9",
-          }}
-        >
+        <div className="card fade-in">
           <h2>Recommendation</h2>
           <p>{recommendation.recommendation}</p>
           {recommendation.loss_percentage !== undefined && (
@@ -244,16 +257,39 @@ function App() {
       )}
 
       {topSpoiled.length > 0 && (
-        <div style={{ marginTop: 30 }}>
-          <h2>Top Spoiled Items</h2>
+        <div className="card fade-in">
+          <h2>Most Spoiled Items</h2>
+          <Pie
+            data={{
+              labels: topSpoiled.map((d) => `${d.item} (${d.city})`),
+              datasets: [
+                {
+                  data: topSpoiled.map((d) => d.loss_percentage),
+                  backgroundColor: [
+                    "#FF6384",
+                    "#36A2EB",
+                    "#FFCE56",
+                    "#4BC0C0",
+                    "#9966FF",
+                  ],
+                },
+              ],
+            }}
+          />
+        </div>
+      )}
+
+      {storeStats.length > 0 && (
+        <div className="card fade-in">
+          <h2>{city} Store Items</h2>
           <Bar
             data={{
-              labels: topSpoiled.map((d) => d.item),
+              labels: storeStats.map((d) => d.item),
               datasets: [
                 {
                   label: "Loss %",
-                  data: topSpoiled.map((d) => d.loss_percentage),
-                  backgroundColor: "rgba(255,99,132,0.5)",
+                  data: storeStats.map((d) => d.loss_percentage),
+                  backgroundColor: "rgba(75,192,192,0.5)",
                 },
               ],
             }}
@@ -263,6 +299,16 @@ function App() {
               scales: { y: { beginAtZero: true } },
             }}
           />
+          <ul className="item-list">
+            {storeStats.map((s) => (
+              <li key={s.item}>
+                <span>
+                  {s.item} ({s.loss_percentage.toFixed(1)}%)
+                </span>
+                <button onClick={() => handleDelete(s.item)}>Remove</button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

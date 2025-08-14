@@ -111,7 +111,8 @@ def recommend_inventory(item: InventoryItem):
     # Track spoilage stats
     SPOILAGE_HISTORY.append({
         "item": item.item.lower(),
-        "loss_percentage": float(loss_percentage * 100)
+        "city": item.city.lower(),
+        "loss_percentage": float(loss_percentage * 100),
     })
 
     # Generating recommendation
@@ -151,18 +152,55 @@ def shelf_life_lookup(item: str):
 
 @app.get("/top_spoiled")
 def top_spoiled(limit: int = 5):
-    """Return top items with highest predicted spoilage."""
+    """Return top item/city combinations with highest predicted spoilage."""
     if not SPOILAGE_HISTORY:
         return []
     df = pd.DataFrame(SPOILAGE_HISTORY)
     top = (
-        df.groupby("item")["loss_percentage"]
+        df.groupby(["item", "city"])["loss_percentage"]
         .mean()
         .sort_values(ascending=False)
         .head(limit)
         .reset_index()
     )
     return top.to_dict(orient="records")
+
+
+@app.get("/store_spoiled")
+def store_spoiled(city: str):
+    """Return spoilage stats for a specific city/store."""
+    if not SPOILAGE_HISTORY:
+        return []
+    df = pd.DataFrame(SPOILAGE_HISTORY)
+    city_df = df[df["city"] == city.lower()]
+    if city_df.empty:
+        return []
+    items = (
+        city_df.groupby("item")["loss_percentage"]
+        .mean()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
+    return items.to_dict(orient="records")
+
+
+class DeleteItem(BaseModel):
+    city: str
+    item: str
+
+
+@app.delete("/store_spoiled")
+def delete_store_item(data: DeleteItem):
+    """Remove all history entries for a given item in a city."""
+    global SPOILAGE_HISTORY
+    before = len(SPOILAGE_HISTORY)
+    SPOILAGE_HISTORY = [
+        record
+        for record in SPOILAGE_HISTORY
+        if not (record["city"] == data.city.lower() and record["item"] == data.item.lower())
+    ]
+    deleted = before - len(SPOILAGE_HISTORY)
+    return {"deleted": deleted}
 
 def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category):
     risk = 0
