@@ -1,11 +1,12 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+from datetime import datetime
+import pandas as pd
+import joblib
 from weather import get_weather
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from datetime import datetime
-
 
 load_dotenv()
 
@@ -22,6 +23,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Loading the ML model from ML folder
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "spoilage_model.pkl")
+model = joblib.load(MODEL_PATH)
+
+# Average shelf life in days for common items (merged from original and CSV commodities)
+AVG_SHELF_LIFE = {
+    ('spinach', 'vegetable'): 5,
+    ('apple', 'fruit'): 30,
+    ('milk', 'dairy'): 7,
+    ('frozen peas', 'frozen'): 180,
+    ('wheat', 'grains'): 180,
+    ('maize (corn)', 'grains'): 180,
+    ('rice', 'grains'): 365,
+    ('rice, milled', 'grains'): 365,
+    ('sorghum', 'grains'): 180,
+    ('barley', 'grains'): 180,
+    ('oats', 'grains'): 180,
+    ('millet', 'grains'): 180,
+    ('buckwheat', 'grains'): 180,
+    ('groundnuts, excluding shelled', 'nuts'): 180
+}
+
+class InventoryItem(BaseModel):
+    item: str
+    category: str  # e.g., "vegetable", "meat", "dairy", "grains"
+    arrival_date: str  # Expecting 'YYYY-MM-DD' string
+    city: str
+
 @app.get("/")
 def read_root():
     return {"message": "SmartInventory backend is running "}
@@ -31,75 +60,77 @@ def fetch_weather(city: str = "Singapore"):
     data = get_weather(city)
     return data
 
-# Average shelf life in days for common items
-# This is a simplified example; in a real app, this could be more comprehensive
-AVG_SHELF_LIFE = {
-    ('spinach', 'vegetable'): 5,
-    ('apple', 'fruit'): 30,
-    ('milk', 'dairy'): 7,
-    ('frozen peas', 'frozen'): 180,
-    # will add more items as needed
-}
-
-class InventoryItem(BaseModel):
-    item: str
-    category: str  # e.g., "vegetable", "meat", "dairy"
-    arrival_date: str  # Expecting 'YYYY-MM-DD' string
-    city: str
-
 @app.post("/inventory")
 def recommend_inventory(item: InventoryItem):
+    # Fetching weather data
     weather_data = get_weather(item.city)
+    forecast_days = weather_data.get('forecast', [])
+    temps = [day['avg_temp_c'] for day in forecast_days]
+    humidities = [day.get('avg_humidity', 0) for day in forecast_days]
+    rains = [day.get('chance_of_rain', 0) for day in forecast_days]
+    avg_temp = sum(temps) / len(temps) if temps else 0
+    avg_humidity = sum(humidities) / len(humidities) if humidities else 0
+    avg_rain = sum(rains) / len(rains) if rains else 0
 
-    temps = [day['avg_temp_c'] for day in weather_data['forecast']]
-    humidities = [day.get('avghumidity', 50) for day in weather_data['forecast']]
-    rains = [day['chance_of_rain'] for day in weather_data['forecast']]
-
-    avg_temp = sum(temps) / len(temps)
-    avg_humidity = sum(humidities) / len(humidities)
-    avg_rain = sum(rains) / len(rains)
-
-    month = datetime.now().month
-
-    risk_score = calculate_spoilage_risk(avg_temp, avg_humidity, avg_rain, month, item.category)
-
-    # Calculate days in stock
+    # Calculating days in stock
     arrival = datetime.strptime(item.arrival_date, '%Y-%m-%d')
     days_in_stock = (datetime.now() - arrival).days
 
     # Lookup avg shelf life (default to 7 days if unknown)
     avg_life = AVG_SHELF_LIFE.get((item.item.lower(), item.category.lower()), 7)
 
-    # Adjusted shelf life factoring in risk (higher risk shortens shelf life)
-    adjusted_shelf_life = max(avg_life - risk_score, 0)
+    # Check if item is in CSV commodities for ML prediction
+    csv_commodities = [
+        'wheat', 'maize (corn)', 'rice', 'rice, milled', 'sorghum', 'barley',
+        'oats', 'millet', 'buckwheat', 'groundnuts, excluding shelled'
+    ]
+    
+    if item.item.lower() in csv_commodities and item.category.lower() == 'grains' or item.category.lower() == 'nuts':
+        # Preparing data for ML model
+        data = pd.DataFrame({
+            "commodity": [item.item],
+            "activity": ["Storage"],  # Assuming storage as the primary concern
+            "food_supply_stage": ["Storage"],
+            "storage_days": [days_in_stock]
+        })
+        # Predicting loss percentage
+        loss_percentage = model.predict(data)[0] / 100  # Convert to decimal
+        risk_factor = min(loss_percentage, 1)  # Scale 0–1
+    else:
+        # Fallback to rule-based risk calculation for non-CSV items
+        month = datetime.now().month
+        risk_score = calculate_spoilage_risk(avg_temp, avg_humidity, avg_rain, month, item.category)
+        risk_factor = min(risk_score / 10, 1)  # Scale 0–1
+        loss_percentage = risk_factor * 10  # Approximate percentage for consistency
 
+    # Adjusted shelf life factoring in risk (at most 50% reduction, min 1 day)
+    adjusted_shelf_life = max(round(avg_life * (1 - 0.5 * risk_factor)), 1)
     remaining_days = adjusted_shelf_life - days_in_stock
 
+    # Generating recommendation
     if remaining_days <= 0:
-        advice = (f"❌ Your {item.item} has likely spoiled due to weather risks and time in storage. "
-                  f"Please remove immediately.")
-    elif risk_score >= 6:
-        advice = (f"⚠️ High spoilage risk for {item.item}. Reduce stock and prioritize clearance. "
-                  f"Estimated remaining shelf life: {remaining_days} days.")
-    elif risk_score >= 3:
-        advice = (f"⚠️ Moderate spoilage risk for {item.item}. Monitor closely. "
-                  f"Estimated remaining shelf life: {remaining_days} days.")
+        advice = f"❌ Your {item.item} has likely spoiled due to weather risks and time in storage. Please remove immediately."
+    elif risk_factor >= 0.6:  # Equivalent to risk_score >= 6 or loss_percentage >= 6%
+        advice = f"⚠️ High spoilage risk for {item.item}. Reduce stock and prioritize clearance. Estimated remaining shelf life: {remaining_days} days."
+        if item.item.lower() == "rice, milled":
+            advice += " Consider implementing rodent trapping to reduce losses."
+    elif risk_factor >= 0.3:  # Equivalent to risk_score >= 3
+        advice = f"⚠️ Moderate spoilage risk for {item.item}. Monitor closely. Estimated remaining shelf life: {remaining_days} days."
     else:
-        advice = (f"✅ Low spoilage risk for {item.item}. Safe to stock normally. "
-                  f"Estimated remaining shelf life: {remaining_days} days.")
+        advice = f"✅ Low spoilage risk for {item.item}. Safe to stock normally. Estimated remaining shelf life: {remaining_days} days."
 
     # Extra explanation about weather effect
     explanation = f"Due to current conditions: Temp {avg_temp:.1f}°C, Humidity {avg_humidity:.1f}%, Rain chance {avg_rain}%."
 
     return {
         "recommendation": advice,
-        "risk_score": risk_score,
+        "risk_score": float(risk_factor * 10),  # Return as 0–10 scale for consistency
+        "loss_percentage": float(loss_percentage * 100),  # Return as percentage
         "days_in_stock": days_in_stock,
         "avg_shelf_life": avg_life,
         "adjusted_shelf_life": adjusted_shelf_life,
         "weather_explanation": explanation
     }
-
 
 def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category):
     risk = 0
@@ -123,10 +154,6 @@ def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category)
         risk += 1
 
     # Seasonal adjustments based on month (Singapore tropical climate example)
-    # Jan-Mar (1-3): medium temps, medium rain
-    # Apr-Jun (4-6): hotter, less rain
-    # Jul-Sep (7-9): hot and rainy
-    # Oct-Dec (10-12): moderate temp, rainy
     if month in [7, 8, 9]:  # peak hot rainy season
         risk += 2
     elif month in [1, 2, 3, 10, 11, 12]:
@@ -138,5 +165,3 @@ def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category)
         risk += 2
 
     return risk
-
-

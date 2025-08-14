@@ -7,13 +7,7 @@ function App() {
   const [arrivalDate, setArrivalDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
   const [recommendation, setRecommendation] = useState(null);
-  const [riskScore, setRiskScore] = useState(null);
-  const [daysInStock, setDaysInStock] = useState(null);
-  const [avgShelfLife, setAvgShelfLife] = useState(null);
-  const [adjustedShelfLife, setAdjustedShelfLife] = useState(null);
-  const [weatherExplanation, setWeatherExplanation] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +19,7 @@ function App() {
 
     setLoading(true);
     setError(null);
+    setRecommendation(null);
 
     try {
       const res = await fetch("http://127.0.0.1:8000/inventory", {
@@ -45,21 +40,10 @@ function App() {
       }
 
       const data = await res.json();
-
-      setRecommendation(data.recommendation);
-      setRiskScore(data.risk_score);
-      setDaysInStock(data.days_in_stock);
-      setAvgShelfLife(data.avg_shelf_life);
-      setAdjustedShelfLife(data.adjusted_shelf_life);
-      setWeatherExplanation(data.weather_explanation);
+      setRecommendation(data);
     } catch (err) {
       setError(err.message);
       setRecommendation(null);
-      setRiskScore(null);
-      setDaysInStock(null);
-      setAvgShelfLife(null);
-      setAdjustedShelfLife(null);
-      setWeatherExplanation(null);
     } finally {
       setLoading(false);
     }
@@ -76,7 +60,7 @@ function App() {
             type="text"
             value={item}
             onChange={(e) => setItem(e.target.value)}
-            placeholder="e.g. Spinach"
+            placeholder="e.g. Rice, milled"
             style={{ width: "100%", padding: 8 }}
             required
           />
@@ -94,6 +78,8 @@ function App() {
             <option value="dairy">Dairy</option>
             <option value="meat">Meat</option>
             <option value="frozen">Frozen</option>
+            <option value="grains">Grains</option>
+            <option value="nuts">Nuts</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -153,13 +139,25 @@ function App() {
           }}
         >
           <h2>Recommendation</h2>
-          <p>{recommendation}</p>
-
-          <p><strong>Risk Score:</strong> {riskScore}</p>
-          <p><strong>Days in Stock:</strong> {daysInStock}</p>
-          <p><strong>Average Shelf Life:</strong> {avgShelfLife} days</p>
-          <p><strong>Adjusted Shelf Life:</strong> {adjustedShelfLife} days</p>
-          <p><em>{weatherExplanation}</em></p>
+          <p>{recommendation.recommendation}</p>
+          {recommendation.loss_percentage !== undefined && (
+            <p><strong>Predicted Loss (%):</strong> {recommendation.loss_percentage.toFixed(2)}%</p>
+          )}
+          {recommendation.risk_score !== undefined && (
+            <p><strong>Risk Score:</strong> {recommendation.risk_score.toFixed(1)}</p>
+          )}
+          {recommendation.days_in_stock !== undefined && (
+            <p><strong>Days in Stock:</strong> {recommendation.days_in_stock}</p>
+          )}
+          {recommendation.avg_shelf_life !== undefined && (
+            <p><strong>Average Shelf Life:</strong> {recommendation.avg_shelf_life} days</p>
+          )}
+          {recommendation.adjusted_shelf_life !== undefined && (
+            <p><strong>Adjusted Shelf Life:</strong> {recommendation.adjusted_shelf_life} days</p>
+          )}
+          {recommendation.weather_explanation && (
+            <p><em>{recommendation.weather_explanation}</em></p>
+          )}
         </div>
       )}
     </div>
