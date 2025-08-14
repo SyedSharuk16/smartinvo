@@ -8,6 +8,12 @@ import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.pipeline import Pipeline
 
 load_dotenv()
 
@@ -29,6 +35,55 @@ SPOILAGE_HISTORY = []
 # Loading the ML model from ML folder
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "spoilage_model.pkl")
 model = joblib.load(MODEL_PATH)
+
+# Load global wastage data once
+WASTAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml", "Wastage.csv")
+WASTAGE_DF = pd.read_csv(WASTAGE_PATH)
+
+# Train a regression model to estimate global food waste
+def train_global_model():
+    df = WASTAGE_DF.copy()
+    df["loss_percentage"] = pd.to_numeric(df["loss_percentage"], errors="coerce")
+    df = df.dropna(subset=["loss_percentage", "commodity", "activity", "food_supply_stage"])
+    if len(df) > 5000:
+        df = df.sample(5000, random_state=42)
+    features = ["commodity", "activity", "food_supply_stage"]
+    X = df[features]
+    y = df["loss_percentage"]
+    pre = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore"), features)])
+    model = GradientBoostingRegressor(random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    pipe = Pipeline(steps=[("pre", pre), ("model", model)])
+    pipe.fit(X_train, y_train)
+    preds = pipe.predict(X_test)
+    accuracy = r2_score(y_test, preds)
+    all_preds = pipe.predict(X)
+    df["predicted_loss"] = all_preds
+    top = (
+        df.groupby("commodity")["predicted_loss"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(5)
+        .reset_index()
+    )
+    return pipe, accuracy, top
+
+GLOBAL_PIPE, GLOBAL_ACCURACY, GLOBAL_TOP = train_global_model()
+GLOBAL_MODEL_INFO = {
+    "model": "GradientBoostingRegressor",
+    "accuracy": float(GLOBAL_ACCURACY),
+    "details": (
+        "Predictions leverage a GradientBoostingRegressor trained on historic spoilage data. "
+        "Higher temperatures accelerate microbial growth and correlate with increased food waste, "
+        "so the app factors local weather into its recommendations."
+    ),
+    "top_items": GLOBAL_TOP["commodity"].tolist(),
+}
+GLOBAL_MODEL_INFO["conclusion"] = (
+    f"Using regression (R^2={GLOBAL_MODEL_INFO['accuracy']:.2f}), top wasted foods are "
+    + ", ".join(GLOBAL_MODEL_INFO["top_items"])
+    + "."
+)
 
 # Load shelf life data from CSV and prepare fuzzy matching
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "shelf_life.csv")
@@ -111,7 +166,8 @@ def recommend_inventory(item: InventoryItem):
     # Track spoilage stats
     SPOILAGE_HISTORY.append({
         "item": item.item.lower(),
-        "loss_percentage": float(loss_percentage * 100)
+        "city": item.city.lower(),
+        "loss_percentage": float(loss_percentage * 100),
     })
 
     # Generating recommendation
@@ -149,20 +205,56 @@ def shelf_life_lookup(item: str):
     return {"item": name, "avg_shelf_life": avg}
 
 
-@app.get("/top_spoiled")
-def top_spoiled(limit: int = 5):
-    """Return top items with highest predicted spoilage."""
+@app.get("/global_waste")
+def global_waste(limit: int = 5):
+    """Return top wasted items predicted by the global model."""
+    top = GLOBAL_TOP.head(limit).copy()
+    top = top.rename(columns={"predicted_loss": "loss_percentage"})
+    top["country"] = "Global"
+    return top.to_dict(orient="records")
+
+
+@app.get("/store_spoiled")
+def store_spoiled(city: str):
+    """Return spoilage stats for a specific city/store."""
     if not SPOILAGE_HISTORY:
         return []
     df = pd.DataFrame(SPOILAGE_HISTORY)
-    top = (
-        df.groupby("item")["loss_percentage"]
+    city_df = df[df["city"] == city.lower()]
+    if city_df.empty:
+        return []
+    items = (
+        city_df.groupby("item")["loss_percentage"]
         .mean()
         .sort_values(ascending=False)
-        .head(limit)
         .reset_index()
     )
-    return top.to_dict(orient="records")
+    return items.to_dict(orient="records")
+
+
+class DeleteItem(BaseModel):
+    city: str
+    item: str
+
+
+@app.delete("/store_spoiled")
+def delete_store_item(data: DeleteItem):
+    """Remove all history entries for a given item in a city."""
+    global SPOILAGE_HISTORY
+    before = len(SPOILAGE_HISTORY)
+    SPOILAGE_HISTORY = [
+        record
+        for record in SPOILAGE_HISTORY
+        if not (record["city"] == data.city.lower() and record["item"] == data.item.lower())
+    ]
+    deleted = before - len(SPOILAGE_HISTORY)
+    return {"deleted": deleted}
+
+
+@app.get("/model_info")
+def model_info():
+    """Explain the ML model, accuracy and top wasted foods."""
+    return GLOBAL_MODEL_INFO
 
 def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category):
     risk = 0
