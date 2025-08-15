@@ -19,10 +19,7 @@ load_dotenv()
 
 app = FastAPI()
 __all__ = ["app"]
-origins = [
-    "http://localhost:3000",
-    "https://smartinvo-e0gv.onrender.com",
-]
+
 
 app.add_middleware(
     CORSMiddleware,
