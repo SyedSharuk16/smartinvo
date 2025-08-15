@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import GlobalWasteSteps from "./GlobalWasteSteps";
 
 ChartJS.register(
   CategoryScale,
@@ -278,6 +279,8 @@ function App() {
           )}
         </div>
       )}
+
+      <GlobalWasteSteps />
 
         <div className="chart-grid">
           {globalWaste.length > 0 && (

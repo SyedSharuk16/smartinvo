@@ -177,3 +177,13 @@ h1{
   font-size: 2rem;
   font-family: 'Fira Mono', monospace;
 }
+
+.animation-steps {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.animation-steps li {
+  margin-bottom: 8px;
+}
