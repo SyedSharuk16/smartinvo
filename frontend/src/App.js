@@ -37,6 +37,7 @@ function App() {
   const [globalWaste, setGlobalWaste] = useState([]);
   const [storeStats, setStoreStats] = useState([]);
   const [modelInfo, setModelInfo] = useState(null);
+  const [animTrigger, setAnimTrigger] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,6 +72,7 @@ function App() {
       const data = await res.json();
       setRecommendation(data);
       fetchModelInfo();
+      setAnimTrigger((t) => t + 1);
     } catch (err) {
       setError(err.message);
       setRecommendation(null);
@@ -280,7 +282,7 @@ function App() {
         </div>
       )}
 
-      <GlobalWasteSteps />
+      <GlobalWasteSteps trigger={animTrigger} />
 
         <div className="chart-grid">
           {globalWaste.length > 0 && (

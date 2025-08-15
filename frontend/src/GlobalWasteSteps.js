@@ -1,10 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
-function GlobalWasteSteps() {
+const Typewriter = ({ text }) => {
+  const [display, setDisplay] = useState("");
+  useEffect(() => {
+    setDisplay("");
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplay((prev) => prev + text.charAt(i));
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 25);
+    return () => clearInterval(interval);
+  }, [text]);
+  return <span>{display}</span>;
+};
+
+const Progress = ({ total }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let current = 0;
+    const inc = Math.max(1, Math.floor(total / 100));
+    const interval = setInterval(() => {
+      current += inc;
+      if (current >= total) {
+        current = total;
+        clearInterval(interval);
+      }
+      setCount(current);
+    }, 20);
+    return () => clearInterval(interval);
+  }, [total]);
+  const percent = (count / total) * 100;
+  return (
+    <div className="progress-wrapper">
+      <div className="progress-bar" style={{ width: `${percent}%` }} />
+      <span className="progress-label">{count}/{total}</span>
+    </div>
+  );
+};
+
+function GlobalWasteSteps({ trigger }) {
   const [steps, setSteps] = useState([]);
   const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!trigger) return;
+    startAnimation();
+  }, [trigger]);
 
   const startAnimation = async () => {
     setRunning(true);
@@ -15,9 +59,9 @@ function GlobalWasteSteps() {
       data.forEach((step, idx) => {
         setTimeout(() => {
           setSteps((prev) => [...prev, step]);
+          if (idx === data.length - 1) setRunning(false);
         }, idx * 1000);
       });
-      setTimeout(() => setRunning(false), data.length * 1000);
     } catch (err) {
       console.error(err);
       setRunning(false);
@@ -27,13 +71,12 @@ function GlobalWasteSteps() {
   return (
     <div className="card">
       <h2>Data Transformation</h2>
-      <button onClick={startAnimation} disabled={running}>
-        {running ? "Processing..." : "Show Transformation"}
-      </button>
+      {running && <p className="loading-dots">Processing</p>}
       <ul className="animation-steps">
         {steps.map((s, i) => (
           <li key={i}>
-            <strong>{s.step}</strong>: {s.description}
+            <strong>{s.step}</strong>: <Typewriter text={s.description} />
+            {s.rows && <Progress total={s.rows} />}
             {s.top && (
               <ul>
                 {s.top.map((t) => (

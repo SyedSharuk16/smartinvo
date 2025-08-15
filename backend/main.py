@@ -45,8 +45,7 @@ def train_global_model():
     df = WASTAGE_DF.copy()
     df["loss_percentage"] = pd.to_numeric(df["loss_percentage"], errors="coerce")
     df = df.dropna(subset=["loss_percentage", "commodity", "activity", "food_supply_stage"])
-    if len(df) > 5000:
-        df = df.sample(5000, random_state=42)
+    # Use the full dataset (~23k rows) for a more accurate model
     features = ["commodity", "activity", "food_supply_stage"]
     X = df[features]
     y = df["loss_percentage"]
@@ -91,14 +90,19 @@ def calculate_global_waste_steps(limit: int = 5):
     """Return step-by-step transformation for global waste data."""
     df = WASTAGE_DF.copy()
     steps = []
-    steps.append({"step": "load_data", "description": f"Loaded {len(df)} rows"})
+    steps.append({"step": "load_data", "description": f"Loaded {len(df)} rows", "rows": int(len(df))})
     df["loss_percentage"] = pd.to_numeric(df["loss_percentage"], errors="coerce")
     before = len(df)
     df = df.dropna(subset=["loss_percentage", "commodity", "activity", "food_supply_stage"])
-    steps.append({"step": "clean_data", "description": f"Removed {before - len(df)} rows with missing values"})
-    if len(df) > 5000:
-        df = df.sample(5000, random_state=42)
-        steps.append({"step": "sample", "description": "Sampled 5000 rows for faster training"})
+    cleaned = len(df)
+    steps.append(
+        {
+            "step": "clean_data",
+            "description": f"Removed {before - cleaned} rows with missing values; {cleaned} rows remain",
+            "rows": int(cleaned),
+        }
+    )
+    # No sampling – process the entire dataset for accuracy
     features = ["commodity", "activity", "food_supply_stage"]
     X = df[features]
     y = df["loss_percentage"]
