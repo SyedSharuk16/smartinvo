@@ -9,10 +9,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
+
 
 .container {
   flex: 1;
@@ -109,16 +106,6 @@ input::placeholder {
   border-radius: 8px;
   padding: 20px;
   color: #ffffff;
-  width: 260px;
-  flex-shrink: 0;
-}
 
-@media (max-width: 767px) {
-  .app-wrapper {
-    flex-direction: column;
-  }
-
-  .model-info {
-    width: 100%;
   }
 }
