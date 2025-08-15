@@ -2,7 +2,7 @@
 
 SmartInvo consists of a FastAPI backend and a React frontend.
 
-## Configuration
+
 
 The backend optionally uses the WeatherAPI service for more accurate
 spoilage predictions. Supply an API key via the `WEATHER_API_KEY`
