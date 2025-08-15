@@ -75,7 +75,7 @@ GLOBAL_MODEL_INFO = {
         "Predictions leverage a GradientBoostingRegressor trained on historic spoilage data. "
         "Higher temperatures accelerate microbial growth and correlate with increased food waste, "
         "so the app factors local weather into its recommendations."
-        "source: https://www.channelnewsasia.com/singapore/singapore-farms-damaged-crops-depleted-livestock-yields-recent-hotter-warmer-weather-higher-temperatures-3508216"
+        " source: https://www.channelnewsasia.com/singapore/singapore-farms-damaged-crops-depleted-livestock-yields-recent-hotter-warmer-weather-higher-temperatures-3508216"
     ),
     "top_items": GLOBAL_TOP["commodity"].tolist(),
 }
@@ -102,7 +102,6 @@ def calculate_global_waste_steps(limit: int = 5):
             "rows": int(cleaned),
         }
     )
-    # No sampling – process the entire dataset for accuracy
     features = ["commodity", "activity", "food_supply_stage"]
     X = df[features]
     y = df["loss_percentage"]
