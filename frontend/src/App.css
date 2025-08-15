@@ -9,7 +9,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-
+}
 
 .container {
   flex: 1;
@@ -107,5 +107,64 @@ input::placeholder {
   padding: 20px;
   color: #ffffff;
 
+}
+
+.glitch {
+  position: relative;
+  animation: glitch 1s linear infinite;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+}
+
+.glitch::before {
+  animation: glitchTop 1s linear infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+  -webkit-clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+}
+
+.glitch::after {
+  animation: glitchBottom 1s linear infinite;
+  clip-path: polygon(0 66%, 100% 66%, 100% 100%, 0 100%);
+  -webkit-clip-path: polygon(0 66%, 100% 66%, 100% 100%, 0 100%);
+}
+
+@keyframes glitch {
+  2%, 64% {
+    transform: translate(2px, 0) skew(0deg);
+  }
+  4%, 60% {
+    transform: translate(-2px, 0) skew(0deg);
+  }
+  62% {
+    transform: translate(0, 0) skew(5deg);
+  }
+}
+
+@keyframes glitchTop {
+  2%, 64% {
+    transform: translate(2px, -2px);
+  }
+  4%, 60% {
+    transform: translate(-2px, 2px);
+  }
+  62% {
+    transform: translate(13px, -1px) skew(-13deg);
+  }
+}
+
+@keyframes glitchBottom {
+  2%, 64% {
+    transform: translate(-2px, 0);
+  }
+  4%, 60% {
+    transform: translate(-2px, 0);
+  }
+  62% {
+    transform: translate(-22px, 5px) skew(21deg);
   }
 }
