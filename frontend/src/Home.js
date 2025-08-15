@@ -146,7 +146,6 @@ function Home() {
 
   useEffect(() => {
     fetchGlobalWaste();
-    fetchStoreStats(city);
   }, []);
 
   useEffect(() => {
