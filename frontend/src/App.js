@@ -161,7 +161,12 @@ function App() {
   return (
     <div className="app-wrapper">
       <div className="container">
-        <h1 className="fade-in">Smart Inventory Spoilage Predictor</h1>
+        <h1
+          className="fade-in glitch"
+          title="Smart Inventory Spoilage Predictor"
+        >
+          Smart Inventory Spoilage Predictor
+        </h1>
 
       <div className="card">
         <h2>Lookup Shelf Life</h2>
