@@ -5,9 +5,18 @@ body {
   color: #ffffff;
 }
 
-.container {
-  max-width: 800px;
+.app-wrapper {
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.container {
+  flex: 1;
+  max-width: 800px;
   padding: 20px;
 }
 
@@ -100,23 +109,16 @@ input::placeholder {
   border-radius: 8px;
   padding: 20px;
   color: #ffffff;
-}
-
-@media (min-width: 768px) {
-  .model-info {
-    position: fixed;
-    right: 20px;
-    top: 80px;
-    width: 260px;
-  }
+  width: 260px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 767px) {
+  .app-wrapper {
+    flex-direction: column;
+  }
+
   .model-info {
-    position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
+    width: 100%;
   }
 }
