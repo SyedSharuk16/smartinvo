@@ -177,3 +177,48 @@ h1{
   font-size: 2rem;
   font-family: 'Fira Mono', monospace;
 }
+
+.animation-steps {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.animation-steps li {
+  margin-bottom: 8px;
+}
+
+.progress-wrapper {
+  position: relative;
+  background: #415a77;
+  border-radius: 4px;
+  height: 6px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: #e0a96d;
+  height: 100%;
+  transition: width 0.2s linear;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.loading-dots::after {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  text-align: left;
+  animation: dots 1s steps(5, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: ""; }
+  40% { content: "."; }
+  60% { content: ".."; }
+  80%, 100% { content: "..."; }
+}
