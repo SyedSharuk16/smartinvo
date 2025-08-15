@@ -86,6 +86,54 @@ GLOBAL_MODEL_INFO["conclusion"] = (
     + "."
 )
 
+
+def calculate_global_waste_steps(limit: int = 5):
+    """Return step-by-step transformation for global waste data."""
+    df = WASTAGE_DF.copy()
+    steps = []
+    steps.append({"step": "load_data", "description": f"Loaded {len(df)} rows"})
+    df["loss_percentage"] = pd.to_numeric(df["loss_percentage"], errors="coerce")
+    before = len(df)
+    df = df.dropna(subset=["loss_percentage", "commodity", "activity", "food_supply_stage"])
+    steps.append({"step": "clean_data", "description": f"Removed {before - len(df)} rows with missing values"})
+    if len(df) > 5000:
+        df = df.sample(5000, random_state=42)
+        steps.append({"step": "sample", "description": "Sampled 5000 rows for faster training"})
+    features = ["commodity", "activity", "food_supply_stage"]
+    X = df[features]
+    y = df["loss_percentage"]
+    pre = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore"), features)])
+    model = GradientBoostingRegressor(random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    pipe = Pipeline(steps=[("pre", pre), ("model", model)])
+    pipe.fit(X_train, y_train)
+    preds = pipe.predict(X_test)
+    accuracy = r2_score(y_test, preds)
+    steps.append({"step": "train_model", "description": f"Trained model with R^2={accuracy:.2f}"})
+    all_preds = pipe.predict(X)
+    df["predicted_loss"] = all_preds
+    top = (
+        df.groupby("commodity")["predicted_loss"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(limit)
+        .reset_index()
+    )
+    steps.append(
+        {
+            "step": "top_waste_items",
+            "description": "Identified top wasted items globally",
+            "top": top.rename(columns={"predicted_loss": "loss_percentage"}).to_dict(orient="records"),
+        }
+    )
+    return steps
+
+
+@app.get("/global_waste_steps")
+def global_waste_steps(limit: int = 5):
+    """Return transformation steps for animation."""
+    return calculate_global_waste_steps(limit)
+
 # Load shelf life data from CSV and prepare fuzzy matching
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "shelf_life.csv")
 SHELF_LIFE_DF = pd.read_csv(DATA_PATH)
