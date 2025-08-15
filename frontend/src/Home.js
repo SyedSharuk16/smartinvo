@@ -23,7 +23,7 @@ ChartJS.register(
 );
 ChartJS.defaults.color = "#FFFFFF";
 
-function Home() {
+function Home({ onLearnMore }) {
   const [item, setItem] = useState("");
   const [category, setCategory] = useState("vegetable");
   const [city, setCity] = useState("Singapore");
@@ -168,6 +168,20 @@ function Home() {
         >
           Smart Inventory Spoilage Predictor
         </h1>
+        <p className="fade-in">
+          predict items expiring soon in your store
+        </p>
+        <p className="fade-in">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onLearnMore && onLearnMore();
+            }}
+          >
+            click here to learn how to use it
+          </a>
+        </p>
 
       <div className="card">
         <h2>Lookup Shelf Life</h2>
