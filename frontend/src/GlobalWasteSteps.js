@@ -70,7 +70,7 @@ function GlobalWasteSteps({ trigger }) {
 
   return (
     <div className="card">
-      <h2>Data Transformation</h2>
+      <h2>Data Transformation from wastage data</h2>
       {running && <p className="loading-dots">Processing</p>}
       <ul className="animation-steps">
         {steps.map((s, i) => (
