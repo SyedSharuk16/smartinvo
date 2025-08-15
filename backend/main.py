@@ -146,14 +146,15 @@ SHELF_LIFE_LOOKUP = {
     row["item"].lower(): row["shelf_life_days"] for _, row in SHELF_LIFE_DF.iterrows()
 }
 
-def get_avg_shelf_life(name: str) -> int:
-    """Return average shelf life for a given item using fuzzy matching."""
+def get_avg_shelf_life(name: str) -> tuple[str, int]:
+    """Return the matched item name and its average shelf life in days."""
     if not SHELF_LIFE_LOOKUP:
-        return 7
+        return name, 7
     match = process.extractOne(name.lower(), list(SHELF_LIFE_LOOKUP.keys()), scorer=fuzz.WRatio)
     if match and match[1] >= 60:
-        return int(SHELF_LIFE_LOOKUP[match[0]])
-    return 7
+        matched = match[0]
+        return matched, int(SHELF_LIFE_LOOKUP[matched])
+    return name, 7
 
 class InventoryItem(BaseModel):
     item: str
@@ -187,7 +188,7 @@ def recommend_inventory(item: InventoryItem):
     days_in_stock = (datetime.now() - arrival).days
 
     # Lookup avg shelf life (default to 7 days if unknown)
-    avg_life = get_avg_shelf_life(item.item)
+    _, avg_life = get_avg_shelf_life(item.item)
 
     # Check if item is in CSV commodities for ML prediction
     csv_commodities = [
@@ -253,9 +254,7 @@ def recommend_inventory(item: InventoryItem):
 @app.get("/shelf_life")
 def shelf_life_lookup(item: str):
     """Return average shelf life for a user-provided item."""
-    avg = get_avg_shelf_life(item)
-    match = process.extractOne(item.lower(), list(SHELF_LIFE_LOOKUP.keys()), scorer=fuzz.WRatio)
-    name = match[0] if match else item
+    name, avg = get_avg_shelf_life(item)
     return {"item": name, "avg_shelf_life": avg}
 
 
