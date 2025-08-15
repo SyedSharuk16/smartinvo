@@ -9,9 +9,10 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-}
+
 
 .container {
+  flex: 1;
   max-width: 800px;
   padding: 20px;
 }
@@ -105,23 +106,6 @@ input::placeholder {
   border-radius: 8px;
   padding: 20px;
   color: #ffffff;
-  margin-top: 20px;
-}
 
-@media (min-width: 768px) {
-  .app-wrapper {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-  }
-
-  .container {
-    flex: 1;
-  }
-
-  .model-info {
-    width: 260px;
-    flex-shrink: 0;
-    margin-top: 0;
   }
 }
