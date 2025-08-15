@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline
 load_dotenv()
 
 app = FastAPI()
+__all__ = ["app"]
 origins = [
     "http://localhost:3000",
 ]
@@ -341,4 +342,9 @@ def calculate_spoilage_risk(avg_temp, humidity, chance_of_rain, month, category)
         risk += 2
 
     return risk
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
