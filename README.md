@@ -15,5 +15,3 @@ export WEATHER_API_KEY=your_key_here
 If no key is provided or the weather service is unreachable, the app
 falls back to static defaults so inventory recommendations continue to
 work.
-
-
