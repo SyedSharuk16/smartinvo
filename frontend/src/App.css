@@ -222,3 +222,13 @@ h1{
   60% { content: ".."; }
   80%, 100% { content: "..."; }
 }
+nav a {
+  color: #ffffff;
+  text-decoration: none;
+  margin-right: 10px;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
