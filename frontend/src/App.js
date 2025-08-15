@@ -159,7 +159,7 @@ function App() {
   const topGlobal = globalWaste[0];
 
   return (
-    <>
+    <div className="app-wrapper">
       <div className="container">
         <h1 className="fade-in">Smart Inventory Spoilage Predictor</h1>
 
@@ -350,7 +350,7 @@ function App() {
           {modelInfo.conclusion && <p><em>{modelInfo.conclusion}</em></p>}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
