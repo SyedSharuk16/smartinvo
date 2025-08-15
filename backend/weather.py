@@ -1,7 +1,8 @@
 import os
 import requests
 
-API_KEY = os.getenv("WEATHER_API_KEY")
+# Default to the provided key if the environment variable is absent
+API_KEY = os.getenv("WEATHER_API_KEY", "4831a907bdd447a98aa155214251508")
 
 
 def get_weather(city: str):

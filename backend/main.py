@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
@@ -170,7 +170,8 @@ def read_root():
     return {"message": "SmartInventory backend is running "}
 
 @app.get("/weather")
-def fetch_weather(city: str = "Singapore"):
+def fetch_weather(city: str = Query(..., description="City to fetch weather for")):
+    """Return weather data for the requested city."""
     data = get_weather(city)
     return data
 
