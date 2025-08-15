@@ -13,7 +13,7 @@ function App() {
         </button>
         <button onClick={() => setPage("about")}>About</button>
       </nav>
-      {page === "about" ? <About /> : <Home />}
+      {page === "about" ? <About /> : <Home onLearnMore={() => setPage("about")} />}
     </div>
   );
 }
