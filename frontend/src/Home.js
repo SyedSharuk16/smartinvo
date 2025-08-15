@@ -11,6 +11,7 @@ import {
   Legend,
 } from "chart.js";
 import GlobalWasteSteps from "./GlobalWasteSteps";
+import { API_URL } from "./config";
 
 ChartJS.register(
   CategoryScale,
@@ -21,8 +22,6 @@ ChartJS.register(
   Legend
 );
 ChartJS.defaults.color = "#FFFFFF";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 function Home() {
   const [item, setItem] = useState("");
