@@ -1,4 +1,4 @@
-from main import (
+from backend.main import (
     calculate_spoilage_risk,
     global_waste,
     model_info,
