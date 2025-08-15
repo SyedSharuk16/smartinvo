@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
 import joblib
-from weather import get_weather
+from backend.weather import get_weather
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
