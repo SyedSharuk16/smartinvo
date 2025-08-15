@@ -109,7 +109,7 @@ input::placeholder {
   border-radius: 8px;
   padding: 20px;
   color: #ffffff;
-
+  word-break: break-word;
 }
 
 .glitch {
@@ -230,5 +230,24 @@ nav a {
 
 nav a:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.4rem;
+  }
+  .model-info {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 400px) {
+  h1 {
+    font-size: 1rem;
+  }
+  .glitch::before,
+  .glitch::after {
+    display: none;
+  }
 }
 
