@@ -39,6 +39,11 @@ function About() {
             environmental signals to give proactive guidance that keeps food
             fresher for longer.
           </p>
+          <p>
+            To use the app, enter an item with its category, city, and arrival
+            date, then click "Get Recommendation" to see predicted spoilage and
+            guidance on managing your stock.
+          </p>
         </div>
       </div>
     </div>
