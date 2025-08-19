@@ -1,23 +1,17 @@
 import os
 import requests
 
-# Default to the provided key if the environment variable is absent
-API_KEY = os.getenv("WEATHER_API_KEY", "4831a907bdd447a98aa155214251508")
+API_KEY = os.getenv("WEATHER_API_KEY")
 
 
 def get_weather(city: str):
-    """Fetch weather forecast data for a city.
-
-    If the external API is unreachable or an API key is missing, return a
-    minimal structure so the app can continue operating without weather data.
-    """
 
     if not API_KEY:
         return {"location": city, "country": "", "forecast": []}
 
     url = (
-        "https://api.weatherapi.com/v1/forecast.json?"
-        f"key={API_KEY}&q={city}&days=3&aqi=no&alerts=yes"
+        "https://api.weatherapi.com/v1/fo   recast.json?"
+        f"key=4831a907bdd447a98aa155214251508&q={city}&days=3&aqi=no&alerts=yes"
     )
 
     try:
