@@ -157,30 +157,46 @@ function Home({ onLearnMore }) {
     fetchStoreStats(city);
   }, [city]);
 
+  const [LottiePlayer, setLottiePlayer] = useState(null);
+  useEffect(() => {
+    import("@lottiefiles/dotlottie-react")
+      .then((mod) => setLottiePlayer(() => mod.DotLottieReact))
+      .catch(() => setLottiePlayer(() => null));
+  }, []);
+
   const topGlobal = globalWaste[0];
 
   return (
     <div className="app-wrapper">
       <div className="container">
-        <h1
-          className="fade-in glitch"
-          title="Smart Inventory Spoilage Predictor"
-        >
-          Smart Inventory Spoilage Predictor
-        </h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h1
+            className="fade-in glitch"
+            title="Smart Inventory Spoilage Predictor"
+          >
+            Smart Inventory Spoilage Predictor
+          </h1>
+          {LottiePlayer && (
+            <LottiePlayer
+              src="https://lottie.host/22b30ede-a986-4d36-b226-25a6c2e04a1b/puJ75NtU1L.lottie"
+              loop
+              autoplay
+              style={{ width: 100, height: 100 }}
+            />
+          )}
+        </div>
         <p className="fade-in">
           predict items expiring soon in your store
         </p>
-        <p className="fade-in">
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              onLearnMore && onLearnMore();
-            }}
+        <p className="fade-in" style={{ color: "white" }}>
+          <button
+            type="button"
+            onClick={() => onLearnMore && onLearnMore()}
+            className="link-button"
           >
-            click here to learn how to use it
-          </a>
+            click here
+          </button>{" "}
+          to learn how to use it
         </p>
 
       <div className="card">
