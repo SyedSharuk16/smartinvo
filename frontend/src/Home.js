@@ -170,10 +170,7 @@ function Home({ onLearnMore }) {
     <div className="app-wrapper">
       <div className="container">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <h1
-            className="fade-in glitch"
-            title="Smart Inventory Spoilage Predictor"
-          >
+          <h1 className="fade-in glitch" title="Smart Invo">
             Smart Invo
           </h1>
           {LottiePlayer && (
