@@ -189,16 +189,13 @@ function Home({ onLearnMore }) {
           predict items expiring soon in your store
         </p>
         <p className="fade-in" style={{ color: "white" }}>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              onLearnMore && onLearnMore();
-            }}
-            style={{ color: "white", textDecoration: "underline" }}
+          <button
+            type="button"
+            onClick={() => onLearnMore && onLearnMore()}
+            className="link-button"
           >
             click here
-          </a>{" "}
+          </button>{" "}
           to learn how to use it
         </p>
 
