@@ -174,7 +174,7 @@ function Home({ onLearnMore }) {
             className="fade-in glitch"
             title="Smart Inventory Spoilage Predictor"
           >
-            Smart Inventory Spoilage Predictor
+            Smart Invo
           </h1>
           {LottiePlayer && (
             <LottiePlayer
@@ -186,7 +186,7 @@ function Home({ onLearnMore }) {
           )}
         </div>
         <p className="fade-in">
-          predict items expiring soon in your store
+          Predict spoilages and optimize inventory management with our AI-powered tool.
         </p>
         <p className="fade-in" style={{ color: "white" }}>
           <button
