@@ -20,8 +20,7 @@ load_dotenv()
 app = FastAPI()
 __all__ = ["app"]
 
-# Determine allowed CORS origins. Always allow the local frontend during development,
-# and optionally include a deployed frontend URL via environment variable.
+# Cors configuration
 frontend_origin = os.getenv("FRONTEND_URL", "").rstrip("/")
 origins = ["http://localhost:3000"]
 if frontend_origin:
@@ -34,6 +33,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+def health():
+    # light weigthed endpoint.
+    return {"ok": True}
 
 SPOILAGE_HISTORY = []
 
