@@ -9,13 +9,17 @@ def get_weather(city: str):
     if not API_KEY:
         return {"location": city, "country": "", "forecast": []}
 
-    url = (
-        "https://api.weatherapi.com/v1/fo   recast.json?"
-        f"key=4831a907bdd447a98aa155214251508&q={city}&days=3&aqi=no&alerts=yes"
-    )
+    url = "https://api.weatherapi.com/v1/forecast.json"
+    params = {
+        "key": API_KEY,
+        "q": city,
+        "days": 3,
+        "aqi": "no",
+        "alerts": "yes",
+    }
 
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
     except (requests.RequestException, ValueError):
