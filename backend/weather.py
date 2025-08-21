@@ -1,17 +1,22 @@
 import os
 import requests
 
-API_KEY = os.getenv("WEATHER_API_KEY")
-
 
 def get_weather(city: str):
+    """Fetch a three-day weather forecast for ``city``.
 
-    if not API_KEY:
+    Returns a dictionary containing the resolved location name, country and a
+    list of per-day forecast details. Each day's entry may omit values if the
+    upstream API does not provide them.
+    """
+
+    api_key = os.getenv("WEATHER_API_KEY")
+    if not api_key:
         return {"location": city, "country": "", "forecast": []}
 
     url = "https://api.weatherapi.com/v1/forecast.json"
     params = {
-        "key": API_KEY,
+        "key": api_key,
         "q": city,
         "days": 3,
         "aqi": "no",
@@ -27,15 +32,16 @@ def get_weather(city: str):
 
     forecast_data = []
     for day in data.get("forecast", {}).get("forecastday", []):
+        day_info = day.get("day", {})
         forecast_data.append(
             {
-                "date": day["date"],
-                "avg_temp_c": day["day"]["avgtemp_c"],
-                "max_temp_c": day["day"]["maxtemp_c"],
-                "min_temp_c": day["day"]["mintemp_c"],
-                "chance_of_rain": day["day"]["daily_chance_of_rain"],
-                "condition": day["day"]["condition"]["text"],
-                "avg_humidity": day["day"].get("avghumidity", 0),
+                "date": day.get("date"),
+                "avg_temp_c": day_info.get("avgtemp_c"),
+                "max_temp_c": day_info.get("maxtemp_c"),
+                "min_temp_c": day_info.get("mintemp_c"),
+                "chance_of_rain": day_info.get("daily_chance_of_rain"),
+                "condition": day_info.get("condition", {}).get("text"),
+                "avg_humidity": day_info.get("avghumidity"),
             }
         )
 
