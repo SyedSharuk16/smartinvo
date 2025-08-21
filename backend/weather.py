@@ -1,37 +1,71 @@
 import os
 import requests
 
-API_KEY = os.getenv("WEATHER_API_KEY")
-
 
 def get_weather(city: str):
+    """Fetch a three-day weather forecast for ``city``.
 
-    if not API_KEY:
-        return {"location": city, "country": "", "forecast": []}
+    Returns a dictionary containing the resolved location name, country and a
+    list of per-day forecast details. Each day's entry may omit values if the
+    upstream API does not provide them. If the API key is missing or the
+    request fails, the returned object will include an ``error`` field so the
+    caller can display a helpful message.
+    """
 
-    url = (
-        "https://api.weatherapi.com/v1/fo   recast.json?"
-        f"key=4831a907bdd447a98aa155214251508&q={city}&days=3&aqi=no&alerts=yes"
-    )
+    api_key = os.getenv("WEATHER_API_KEY")
+    if not api_key:
+        # Surface the missing key to callers so they can display an
+        # informative message rather than silently showing empty data.
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": "missing-api-key",
+        }
+
+    url = "https://api.weatherapi.com/v1/forecast.json"
+    params = {
+        "key": api_key,
+        "q": city,
+        "days": 3,
+        "aqi": "no",
+        "alerts": "no",
+    }
 
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
+        response = requests.get(url, params=params, timeout=5)
         data = response.json()
     except (requests.RequestException, ValueError):
-        return {"location": city, "country": "", "forecast": []}
+        # Network errors or unexpected payloads should also be reported
+        # back to the caller so the frontend can react accordingly.
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": "unavailable",
+        }
+
+    if response.status_code != 200 or data.get("error"):
+        message = data.get("error", {}).get("message", "unavailable")
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": message,
+        }
 
     forecast_data = []
     for day in data.get("forecast", {}).get("forecastday", []):
+        day_info = day.get("day", {})
         forecast_data.append(
             {
-                "date": day["date"],
-                "avg_temp_c": day["day"]["avgtemp_c"],
-                "max_temp_c": day["day"]["maxtemp_c"],
-                "min_temp_c": day["day"]["mintemp_c"],
-                "chance_of_rain": day["day"]["daily_chance_of_rain"],
-                "condition": day["day"]["condition"]["text"],
-                "avg_humidity": day["day"].get("avghumidity", 0),
+                "date": day.get("date"),
+                "avg_temp_c": day_info.get("avgtemp_c"),
+                "max_temp_c": day_info.get("maxtemp_c"),
+                "min_temp_c": day_info.get("mintemp_c"),
+                "chance_of_rain": day_info.get("daily_chance_of_rain"),
+                "condition": day_info.get("condition", {}).get("text"),
+                "avg_humidity": day_info.get("avghumidity"),
             }
         )
 
