@@ -29,12 +29,11 @@ def get_weather(city: str):
         "q": city,
         "days": 3,
         "aqi": "no",
-        "alerts": "yes",
+        "alerts": "no",
     }
 
     try:
         response = requests.get(url, params=params, timeout=5)
-        response.raise_for_status()
         data = response.json()
     except (requests.RequestException, ValueError):
         # Network errors or unexpected payloads should also be reported
@@ -44,6 +43,15 @@ def get_weather(city: str):
             "country": "",
             "forecast": [],
             "error": "unavailable",
+        }
+
+    if response.status_code != 200 or data.get("error"):
+        message = data.get("error", {}).get("message", "unavailable")
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": message,
         }
 
     forecast_data = []

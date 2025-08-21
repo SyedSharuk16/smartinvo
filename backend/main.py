@@ -192,6 +192,10 @@ def recommend_inventory(item: InventoryItem):
             f"Due to current conditions: Temp {avg_temp:.1f}°C, "
             f"Humidity {avg_humidity:.1f}%, Rain chance {avg_rain}%."
         )
+    elif weather_data.get("error"):
+        explanation = (
+            f"Weather data unavailable ({weather_data['error']}); using default assumptions."
+        )
     else:
         explanation = "Weather data unavailable; using default assumptions."
 
