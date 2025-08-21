@@ -383,6 +383,16 @@ function Home({ onLearnMore }) {
           </p>
           <p>{modelInfo.details}</p>
           {modelInfo.conclusion && <p><em>{modelInfo.conclusion}</em></p>}
+          {modelInfo.top_items_predicted && (
+            <p>
+              <strong>Predicted top wastes:</strong> {modelInfo.top_items_predicted.join(", ")}
+            </p>
+          )}
+          {modelInfo.top_items_actual && (
+            <p>
+              <strong>Highest historical wastes:</strong> {modelInfo.top_items_actual.join(", ")}
+            </p>
+          )}
         </div>
       )}
     </div>

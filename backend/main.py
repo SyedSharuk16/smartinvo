@@ -67,16 +67,23 @@ def train_global_model():
     accuracy = r2_score(y_test, preds)
     all_preds = pipe.predict(X)
     df["predicted_loss"] = all_preds
-    top = (
+    top_pred = (
         df.groupby("commodity")["predicted_loss"]
         .mean()
         .sort_values(ascending=False)
         .head(5)
         .reset_index()
     )
-    return pipe, accuracy, top
+    top_actual = (
+        df.groupby("commodity")["loss_percentage"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(5)
+        .reset_index()
+    )
+    return pipe, accuracy, top_pred, top_actual
 
-GLOBAL_PIPE, GLOBAL_ACCURACY, GLOBAL_TOP = train_global_model()
+GLOBAL_PIPE, GLOBAL_ACCURACY, GLOBAL_TOP_PRED, GLOBAL_TOP_ACTUAL = train_global_model()
 GLOBAL_MODEL_INFO = {
     "model": "GradientBoostingRegressor",
     "accuracy": float(GLOBAL_ACCURACY),
@@ -86,11 +93,12 @@ GLOBAL_MODEL_INFO = {
         "so the app factors local weather into its recommendations."
         " source: https://www.channelnewsasia.com/singapore/singapore-farms-damaged-crops-depleted-livestock-yields-recent-hotter-warmer-weather-higher-temperatures-3508216"
     ),
-    "top_items": GLOBAL_TOP["commodity"].tolist(),
+    "top_items_predicted": GLOBAL_TOP_PRED["commodity"].tolist(),
+    "top_items_actual": GLOBAL_TOP_ACTUAL["commodity"].tolist(),
 }
 GLOBAL_MODEL_INFO["conclusion"] = (
-    f"Using regression (R^2={GLOBAL_MODEL_INFO['accuracy']:.2f}), top wasted foods are "
-    + ", ".join(GLOBAL_MODEL_INFO["top_items"])
+    f"Using regression (R^2={GLOBAL_MODEL_INFO['accuracy']:.2f}), top predicted wasted foods are "
+    + ", ".join(GLOBAL_MODEL_INFO["top_items_predicted"])
     + "."
 )
 
@@ -278,7 +286,7 @@ def shelf_life_lookup(item: str):
 @app.get("/global_waste")
 def global_waste(limit: int = 5):
     """Return top wasted items predicted by the global model."""
-    top = GLOBAL_TOP.head(limit).copy()
+    top = GLOBAL_TOP_PRED.head(limit).copy()
     top = top.rename(columns={"predicted_loss": "loss_percentage"})
     top["country"] = "Global"
     return top.to_dict(orient="records")
