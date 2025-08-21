@@ -7,12 +7,21 @@ def get_weather(city: str):
 
     Returns a dictionary containing the resolved location name, country and a
     list of per-day forecast details. Each day's entry may omit values if the
-    upstream API does not provide them.
+    upstream API does not provide them. If the API key is missing or the
+    request fails, the returned object will include an ``error`` field so the
+    caller can display a helpful message.
     """
 
     api_key = os.getenv("WEATHER_API_KEY")
     if not api_key:
-        return {"location": city, "country": "", "forecast": []}
+        # Surface the missing key to callers so they can display an
+        # informative message rather than silently showing empty data.
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": "missing-api-key",
+        }
 
     url = "https://api.weatherapi.com/v1/forecast.json"
     params = {
@@ -28,7 +37,14 @@ def get_weather(city: str):
         response.raise_for_status()
         data = response.json()
     except (requests.RequestException, ValueError):
-        return {"location": city, "country": "", "forecast": []}
+        # Network errors or unexpected payloads should also be reported
+        # back to the caller so the frontend can react accordingly.
+        return {
+            "location": city,
+            "country": "",
+            "forecast": [],
+            "error": "unavailable",
+        }
 
     forecast_data = []
     for day in data.get("forecast", {}).get("forecastday", []):
