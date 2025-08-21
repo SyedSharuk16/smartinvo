@@ -179,13 +179,25 @@ def fetch_weather(city: str = Query(..., description="City to fetch weather for"
 def recommend_inventory(item: InventoryItem):
     # Fetching weather data
     weather_data = get_weather(item.city)
-    forecast_days = weather_data.get('forecast', [])
-    temps = [day['avg_temp_c'] for day in forecast_days]
-    humidities = [day.get('avg_humidity', 0) for day in forecast_days]
-    rains = [day.get('chance_of_rain', 0) for day in forecast_days]
+    forecast_days = weather_data.get("forecast", [])
+    temps = [day["avg_temp_c"] for day in forecast_days]
+    humidities = [day.get("avg_humidity", 0) for day in forecast_days]
+    rains = [day.get("chance_of_rain", 0) for day in forecast_days]
     avg_temp = sum(temps) / len(temps) if temps else 0
     avg_humidity = sum(humidities) / len(humidities) if humidities else 0
     avg_rain = sum(rains) / len(rains) if rains else 0
+
+    if forecast_days:
+        explanation = (
+            f"Due to current conditions: Temp {avg_temp:.1f}°C, "
+            f"Humidity {avg_humidity:.1f}%, Rain chance {avg_rain}%."
+        )
+    elif weather_data.get("error"):
+        explanation = (
+            f"Weather data unavailable ({weather_data['error']}); using default assumptions."
+        )
+    else:
+        explanation = "Weather data unavailable; using default assumptions."
 
     # Calculating days in stock
     arrival = datetime.strptime(item.arrival_date, '%Y-%m-%d')
@@ -241,9 +253,6 @@ def recommend_inventory(item: InventoryItem):
     else:
         advice = f"✅ Low spoilage risk for {item.item}. Safe to stock normally. Estimated remaining shelf life: {remaining_days} days."
 
-    # Extra explanation about weather effect
-    explanation = f"Due to current conditions: Temp {avg_temp:.1f}°C, Humidity {avg_humidity:.1f}%, Rain chance {avg_rain}%."
-
     return {
         "recommendation": advice,
         "risk_score": float(risk_factor * 10),  # Return as 0–10 scale for consistency
@@ -251,7 +260,7 @@ def recommend_inventory(item: InventoryItem):
         "days_in_stock": days_in_stock,
         "avg_shelf_life": avg_life,
         "adjusted_shelf_life": adjusted_shelf_life,
-        "weather_explanation": explanation
+        "weather_explanation": explanation,
     }
 
 
